@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\BookingController;
+use App\Mail\BookingMail;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 /*

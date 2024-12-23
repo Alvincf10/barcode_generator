@@ -2,26 +2,27 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
-class BookingMail extends Mailable
-{
-    use Queueable, SerializesModels;
+class BookingMail extends Mailable{
+    use SerializesModels;
+
     public $bookingId;
+    public $qrCodeBase64;
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($bookingId)
+    public function __construct($bookingId, $qrCodeBase64)
     {
         $this->bookingId = $bookingId;
+        $this->qrCodeBase64 = $qrCodeBase64;
     }
 
     /**
@@ -32,7 +33,7 @@ class BookingMail extends Mailable
     public function envelope()
     {
         return new Envelope(
-            subject: 'Booking Mail',
+            subject: 'Booking Ticket',
         );
     }
 
@@ -43,14 +44,12 @@ class BookingMail extends Mailable
      */
     public function content()
     {
-        $qrCode = QrCode::format('png')->size(200)->generate($this->bookingId);
-        $qrCodeBase64 = base64_encode($qrCode);
-
         return new Content(
             view: 'emails.booking',
+            text: 'emails.booking_plain',
             with: [
                 'bookingId' => $this->bookingId,
-                'qrCodeBase64' => $qrCodeBase64,
+                'qrCodeBase64' => $this->qrCodeBase64,
             ],
         );
     }
@@ -62,6 +61,14 @@ class BookingMail extends Mailable
      */
     public function attachments()
     {
-        return [];
+        $pdf = Pdf::loadView('pdf.booking', [
+            'bookingId' => $this->bookingId,
+            'qrCodeBase64' => $this->qrCodeBase64,
+        ]);
+
+        return [
+            Attachment::fromData(fn () => $pdf->output(), 'booking_ticket.pdf')
+                ->withMime('application/pdf'),
+        ];
     }
 }
